@@ -39,6 +39,7 @@
     <a href="#about">わたしについて</a>
     <a href="#favorites">すきなもの</a>
     <a href="#works">さくひん</a>
+    <a href="#album">アルバム</a>
     <a href="#gallery">ギャラリー</a>
     <a href="#contact">れんらく</a>
   </nav>
@@ -269,6 +270,49 @@
       </div>
     </section>
 
+    <!-- さくひんアルバム -->
+    <section id="album" class="section">
+      <div class="section-inner">
+        <h2 class="section-title">
+          <span class="title-icon">📷</span>
+          さくひんアルバム
+          <span class="title-icon">📷</span>
+        </h2>
+
+        <!-- フィルタータブ -->
+        <div class="album-filter">
+          <button class="filter-btn active" data-filter="all">すべて</button>
+          <button class="filter-btn" data-filter="shima">シマエナガ 🐦</button>
+          <button class="filter-btn" data-filter="cat">シャムネコ 🐱</button>
+          <button class="filter-btn" data-filter="other">その他 🎨</button>
+        </div>
+
+        <!-- フォトグリッド -->
+        <div class="photo-grid" id="photoGrid"></div>
+
+        <!-- 写真がないときのメッセージ -->
+        <div class="album-empty" id="albumEmpty">
+          <div class="album-empty-icon">📸</div>
+          <p class="album-empty-title">まだ写真がないよ！</p>
+          <p class="album-empty-desc">さくひんの写真を追加してみてね🎨</p>
+          <div class="album-steps">
+            <div class="album-step">
+              <span class="step-num">1</span>
+              <span>写真ファイルを <code>images/works/</code> に入れる</span>
+            </div>
+            <div class="album-step">
+              <span class="step-num">2</span>
+              <span><code>photos.js</code> にファイル名・タイトル・カテゴリを書く</span>
+            </div>
+            <div class="album-step">
+              <span class="step-num">3</span>
+              <span>ブラウザを更新する 🔄</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ギャラリー（シマエナガ&ねこコレクション） -->
     <section id="gallery" class="section section-alt">
       <div class="section-inner">
@@ -416,12 +460,31 @@
     <p class="footer-sub">シマエナガと猫が大すき！</p>
   </footer>
 
+  <!-- ライトボックス -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+    <div class="lightbox-overlay" id="lightboxOverlay"></div>
+    <div class="lightbox-inner">
+      <button class="lightbox-close" id="lightboxClose" aria-label="閉じる">✕</button>
+      <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="前の写真">&#8249;</button>
+      <div class="lightbox-content">
+        <img class="lightbox-img" id="lightboxImg" src="" alt="">
+        <div class="lightbox-info">
+          <p class="lightbox-caption" id="lightboxCaption"></p>
+          <p class="lightbox-counter" id="lightboxCounter"></p>
+        </div>
+      </div>
+      <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="次の写真">&#8250;</button>
+    </div>
+  </div>
+
+  <script src="photos.js"></script>
   <script>
+    // ===== クイズ =====
     function toggleAnswer(card) {
       card.classList.toggle('open');
     }
 
-    // スクロール時のアニメーション
+    // ===== スクロールアニメーション =====
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -433,6 +496,125 @@
     document.querySelectorAll('.fav-card, .work-item, .gallery-item, .quiz-card').forEach(el => {
       observer.observe(el);
     });
+
+    // ===== アルバム機能 =====
+    const photos = (typeof PHOTOS !== 'undefined') ? PHOTOS : [];
+    let filteredPhotos = [];
+    let currentPhotoIndex = 0;
+
+    function getCategoryIcon(category) {
+      return { shima: '🐦', cat: '🐱', other: '🎨' }[category] || '📷';
+    }
+
+    function formatDate(date) {
+      if (!date) return '';
+      const [year, month] = date.split('-');
+      return `${year}年${parseInt(month)}月`;
+    }
+
+    function renderAlbum(filter = 'all') {
+      filteredPhotos = filter === 'all' ? [...photos] : photos.filter(p => p.category === filter);
+      const grid = document.getElementById('photoGrid');
+      const empty = document.getElementById('albumEmpty');
+
+      if (filteredPhotos.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      grid.innerHTML = filteredPhotos.map((photo, index) => `
+        <div class="photo-item" onclick="openLightbox(${index})">
+          <div class="photo-thumb">
+            <img src="${photo.src}" alt="${photo.caption}"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="photo-placeholder" style="display:none">
+              <span class="photo-placeholder-icon">${getCategoryIcon(photo.category)}</span>
+              <span class="photo-placeholder-text">画像を読み込み中…</span>
+            </div>
+          </div>
+          <div class="photo-overlay">
+            <p class="photo-caption">${photo.caption}</p>
+            ${photo.date ? `<p class="photo-date">${formatDate(photo.date)}</p>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      // フォトアイテムにアニメーション
+      grid.querySelectorAll('.photo-item').forEach((el, i) => {
+        el.style.animationDelay = `${i * 0.05}s`;
+        el.classList.add('photo-animate');
+      });
+    }
+
+    // フィルターボタン
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderAlbum(btn.dataset.filter);
+      });
+    });
+
+    // ===== ライトボックス =====
+    function openLightbox(index) {
+      currentPhotoIndex = index;
+      updateLightbox();
+      document.getElementById('lightbox').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function updateLightbox() {
+      const photo = filteredPhotos[currentPhotoIndex];
+      const img = document.getElementById('lightboxImg');
+      img.src = photo.src;
+      img.alt = photo.caption;
+      document.getElementById('lightboxCaption').textContent = photo.caption;
+      document.getElementById('lightboxCounter').textContent =
+        `${currentPhotoIndex + 1} / ${filteredPhotos.length}`;
+      document.getElementById('lightboxPrev').style.opacity = currentPhotoIndex === 0 ? '0.3' : '1';
+      document.getElementById('lightboxNext').style.opacity =
+        currentPhotoIndex === filteredPhotos.length - 1 ? '0.3' : '1';
+    }
+
+    function prevPhoto() {
+      if (currentPhotoIndex > 0) { currentPhotoIndex--; updateLightbox(); }
+    }
+
+    function nextPhoto() {
+      if (currentPhotoIndex < filteredPhotos.length - 1) { currentPhotoIndex++; updateLightbox(); }
+    }
+
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    document.getElementById('lightboxOverlay').addEventListener('click', closeLightbox);
+    document.getElementById('lightboxPrev').addEventListener('click', prevPhoto);
+    document.getElementById('lightboxNext').addEventListener('click', nextPhoto);
+
+    document.addEventListener('keydown', e => {
+      if (!document.getElementById('lightbox').classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') prevPhoto();
+      if (e.key === 'ArrowRight') nextPhoto();
+    });
+
+    // タッチスワイプ対応
+    let touchStartX = 0;
+    document.getElementById('lightbox').addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+    });
+    document.getElementById('lightbox').addEventListener('touchend', e => {
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) { diff > 0 ? nextPhoto() : prevPhoto(); }
+    });
+
+    // 初期表示
+    renderAlbum();
   </script>
 
 </body>
