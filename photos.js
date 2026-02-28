@@ -15,12 +15,12 @@ const PHOTOS = [
 
   // ↓↓↓ ここにコピーして追加してね ↓↓↓
   //
-  // {
-  //   src: "images/works/ファイル名.jpg",
-  //   caption: "作品のタイトル",
-  //   category: "shima",   // shima / cat / other
-  //   date: "2026-01"
-  // },
+  {
+     src: "images/works/20251231_193347.jpg",
+     caption: "ひょっこりシマエナガ",
+     category: "shima",
+     date: "2025-12-31"
+  },
   //
   // ↑↑↑ ここまで ↑↑↑
 
